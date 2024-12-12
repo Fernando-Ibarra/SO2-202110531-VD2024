@@ -77,6 +77,8 @@
 
 #include "uid16.h"
 
+#include <linux/uaccess.h>
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a, b)	(-EINVAL)
 #endif
@@ -2922,3 +2924,31 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 	return 0;
 }
 #endif /* CONFIG_COMPAT */
+
+struct syscall_counters {
+	int open_counter;
+	int write_counter;
+	int read_counter;
+	int fork_counter;
+};
+
+extern int open_counter;
+extern int write_counter;
+extern int read_counter;
+extern int fork_counter;
+
+
+SYSCALL_DEFINE1(get_counter_calls, struct syscall_counters __user *, counters)
+{
+	struct syscall_counters sc;
+
+	sc.open_counter = open_counter;
+	sc.write_counter = write_counter;
+	sc.read_counter = read_counter;
+	sc.fork_counter = fork_counter;
+
+	if (copy_to_user(counters, &sc, sizeof(struct syscall_counters)))
+		return -EFAULT;
+
+	return 0;
+}
