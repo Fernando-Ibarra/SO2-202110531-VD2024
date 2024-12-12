@@ -67,6 +67,9 @@
 
 #include <linux/nospec.h>
 
+#include <linux/vmstat.h>
+#include <linux/mmzone.h>
+
 #include <linux/kmsg_dump.h>
 /* Move somewhere else to avoid recompiling? */
 #include <generated/utsrelease.h>
@@ -77,7 +80,7 @@
 
 #include "uid16.h"
 
-#include <linux/uaccess.h>
+
 
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a, b)	(-EINVAL)
@@ -2925,6 +2928,7 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 }
 #endif /* CONFIG_COMPAT */
 
+// COUNTER
 struct syscall_counters {
 	int open_counter;
 	int write_counter;
@@ -2948,6 +2952,33 @@ SYSCALL_DEFINE1(get_counter_calls, struct syscall_counters __user *, counters)
 	sc.fork_counter = fork_counter;
 
 	if (copy_to_user(counters, &sc, sizeof(struct syscall_counters)))
+		return -EFAULT;
+
+	return 0;
+}
+
+// MEM INFO
+
+struct memory_info {
+	unsigned long active_pages;
+	unsigned long cache_pages;
+	unsigned long swap_pages;
+	unsigned long free_pages;
+	unsigned long total_pages;
+};
+
+SYSCALL_DEFINE1(get_snap_info_info, struct memory_info __user *, info)
+{
+	struct memory_info mi;
+	// anon active pages + files active pages
+	mi.active_pages = global_node_page_state(NR_ACTIVE_ANON) + global_node_page_state(NR_ACTIVE_FILE);
+	// cache pages = file pages - mem shared pages
+	mi.cache_pages = global_node_page_state(NR_FILE_PAGES) - global_node_page_state(NR_SHMEM);
+	mi.swap_pages = global_node_page_state(NR_SWAPCACHE);
+	mi.free_pages = global_node_page_state(NR_FREE_PAGES);
+	mi.total_pages = totalram_pages();
+
+	if (copy_to_user(info, &mi, sizeof(struct memory_info)))
 		return -EFAULT;
 
 	return 0;

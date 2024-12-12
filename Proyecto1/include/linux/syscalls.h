@@ -1079,6 +1079,7 @@ asmlinkage long sys_fork(void);
 
 
 asmlinkage long sys_get_counter(struct syscall_counters __user *counters);
+asmlinkage long sys_get_meminfo(struct syscall_meminfo __user *meminfo);
 
 /* obsolete */
 asmlinkage long sys_stime(__kernel_old_time_t __user *tptr);

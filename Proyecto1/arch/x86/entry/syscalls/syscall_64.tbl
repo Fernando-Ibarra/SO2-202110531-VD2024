@@ -430,3 +430,4 @@
 # not special and are not to be used for x32-specific syscalls.
 
 548 common get_counter_calls sys_get_counter_calls
+549 common get_snap_info_info sys_get_snap_info_info
