@@ -82,7 +82,6 @@ static int stats_show(struct seq_file *m, void *v) {
     return 0;
 }
 
-// Inicialización de procfs
 static int stats_open(struct inode *inode, struct file *file) {
     return single_open(file, stats_show, NULL);
 }
