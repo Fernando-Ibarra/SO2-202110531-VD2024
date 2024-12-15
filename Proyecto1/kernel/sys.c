@@ -67,8 +67,12 @@
 
 #include <linux/nospec.h>
 
+// MY IMPORTS
 #include <linux/vmstat.h>
 #include <linux/mmzone.h>
+#include <linux/sysinfo.h>
+#include <linux/swap.h>
+#include <linux/sched.h>
 
 #include <linux/kmsg_dump.h>
 /* Move somewhere else to avoid recompiling? */
@@ -2962,7 +2966,9 @@ SYSCALL_DEFINE1(get_counter_calls, struct syscall_counters __user *, counters)
 struct memory_info {
 	unsigned long active_pages;
 	unsigned long cache_pages;
-	unsigned long swap_pages;
+	unsigned long total_swap;
+	unsigned long free_swap;
+	unsigned long cache_swap;
 	unsigned long free_pages;
 	unsigned long total_pages;
 };
@@ -2970,15 +2976,86 @@ struct memory_info {
 SYSCALL_DEFINE1(get_snap_info_info, struct memory_info __user *, info)
 {
 	struct memory_info mi;
-	// anon active pages + files active pages
+	struct sysinfo si;
+
+	si_meminfo(&si);
+
 	mi.active_pages = global_node_page_state(NR_ACTIVE_ANON) + global_node_page_state(NR_ACTIVE_FILE);
-	// cache pages = file pages - mem shared pages
-	mi.cache_pages = global_node_page_state(NR_FILE_PAGES) - global_node_page_state(NR_SHMEM);
-	mi.swap_pages = global_node_page_state(NR_SWAPCACHE);
-	mi.free_pages = global_node_page_state(NR_FREE_PAGES);
+	mi.cache_pages = si.bufferram;
+	mi.free_pages = si.freeram;
 	mi.total_pages = totalram_pages();
+	mi.total_swap = get_nr_swap_pages();
+	mi.cache_swap = global_zone_page_state(NR_SWAPCACHE);
+	mi.free_swap = mi.total_swap - mi.cache_swap;
+
+
+	unsigned long page_size_kb = PAGE_SIZE / 1024;
+	mi.total_swap = mi.total_swap * page_size_kb;
+	mi.free_swap = mi.free_swap * page_size_kb;
+	mi.cache_swap = mi.cache_swap * page_size_kb;
 
 	if (copy_to_user(info, &mi, sizeof(struct memory_info)))
+		return -EFAULT;
+
+	return 0;
+}
+
+#define MAX_PROCESSES 15
+struct process_io_stats {
+	pid_t pid;
+	char comm[TASK_COMM_LEN];
+	unsigned long read_bytes;
+	unsigned long write_bytes;
+	unsigned long read_bytes_from_disk;
+	unsigned long write_bytes_to_disk;
+};
+
+struct process_io_stats_response {
+	int total_processes;
+	struct process_io_stats processes[MAX_PROCESSES];
+};
+
+SYSCALL_DEFINE1(get_io_process_stats, struct process_io_stats_response __user *, response)
+{
+	struct process_io_stats_response process_stats;
+	struct task_struct *task;
+	int process_count = 0;
+
+	memset(&process_stats, 0, sizeof(process_stats));
+
+	for_each_process(task) {
+		if (process_count >= MAX_PROCESSES)
+			break;
+
+		// skip pid where ioac.rchar is 0
+		if (task->ioac.rchar == 0)
+			continue;
+
+		// delete if pid is repeated
+		int repeated = 0;
+		for (int i = 0; i < process_count; i++) {
+			if (process_stats.processes[i].pid == task->pid) {
+				repeated = 1;
+				break;
+			}
+		}
+
+		if (repeated)
+			continue;
+
+		process_stats.processes[process_count].pid = task->pid;
+		strncpy(process_stats.processes[process_count].comm, task->comm, TASK_COMM_LEN);
+		process_stats.processes[process_count].read_bytes = task->ioac.rchar;
+		process_stats.processes[process_count].write_bytes = task->ioac.wchar;
+		process_stats.processes[process_count].read_bytes_from_disk = task->ioac.read_bytes;
+		process_stats.processes[process_count].write_bytes_to_disk = task->ioac.write_bytes;
+
+		process_count++;
+	}
+
+	process_stats.total_processes = process_count;
+
+	if (copy_to_user(response, &process_stats, sizeof(process_stats)))
 		return -EFAULT;
 
 	return 0;

@@ -1077,9 +1077,10 @@ asmlinkage long sys_sysfs(int option,
 				unsigned long arg1, unsigned long arg2);
 asmlinkage long sys_fork(void);
 
-
+// MY SYSTEM CALLS
 asmlinkage long sys_get_counter(struct syscall_counters __user *counters);
 asmlinkage long sys_get_meminfo(struct syscall_meminfo __user *meminfo);
+asmlinkage long sys_get_io(struct syscall_io __user *io);
 
 /* obsolete */
 asmlinkage long sys_stime(__kernel_old_time_t __user *tptr);
