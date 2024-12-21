@@ -1,0 +1,120 @@
+******************** Memory Snapshot ********************
+open() was called 9209 times
+write() was called 19722713 times
+read() was called 26593455 times
+fork() was called 26 times
+******************** Track Syscall Usage ********************
+Active pages: 1002610
+Cache pages: 75020
+Free pages: 264827
+Total pages: 1759693
+Total swap: 3906556
+Free swap: 3839660
+Cache swap: 66896
+******************** I/O Throttle ********************
+Total processes: 15
+PID: 1
+Comm: systemd
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 126375707675722
+Write bytes: 0
+Read bytes from disk: 163840
+Write bytes to disk: 160656
+
+PID: 160656
+Comm: 
+Read bytes: 4096
+Write bytes: 25769803777
+Read bytes from disk: 2092128
+Write bytes to disk: 2096224
+
+PID: 2096224
+Comm: 
+Read bytes: 64
+Write bytes: 2121232
+Read bytes from disk: 15762873573703680
+Write bytes to disk: 17733198414872590
+
+PID: 6
+Comm: 
+Read bytes: 140733538003616
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 3
+
+PID: 3
+Comm: 
+Read bytes: 4294967295
+Write bytes: 126375707641952
+Read bytes from disk: 126375707871920
+Write bytes to disk: 0
+
+PID: 0
+Comm: 
+Read bytes: 0
+Write bytes: 0
+Read bytes from disk: 0
+Write bytes to disk: 126375707773680
+

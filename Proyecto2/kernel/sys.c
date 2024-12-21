@@ -72,7 +72,7 @@
 #include <linux/mmzone.h>
 #include <linux/sysinfo.h>
 #include <linux/swap.h>
-#include <linux/sched.h>
+#include <linux/slab.h>
 
 #include <linux/kmsg_dump.h>
 /* Move somewhere else to avoid recompiling? */
@@ -3059,4 +3059,23 @@ SYSCALL_DEFINE1(get_io_process_stats, struct process_io_stats_response __user *,
 		return -EFAULT;
 
 	return 0;
+}
+
+SYSCALL_DEFINE1(get_addr_tamalloc, size_t, size) {
+    unsigned long addr;
+    size_t aligned_size;
+
+    // Verificar que el tamaño solicitado es válido
+    if (size == 0 || size > TASK_SIZE)
+        return -EINVAL;
+
+    // Alinear el tamaño al tamaño de página
+    aligned_size = PAGE_ALIGN(size);
+
+    // Reservar memoria virtual (sin asignar páginas físicas)
+    addr = vm_mmap(NULL, 0, aligned_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0);
+    if (IS_ERR_VALUE(addr))
+        return addr;
+
+    return addr; // Retorna la dirección virtual
 }
