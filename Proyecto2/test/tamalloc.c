@@ -60,14 +60,19 @@ int main() {
     printf("Presione enter: ");
     scanf("%*c");
 
-    // Acceder a la memoria y forzar page faults
+    // Acceder a la memoria 
     printf("\nAccediendo a la memoria asignada...\n");
     char *data = (char *)addr;
-    for (size_t i = 0; i < size; i++) { // Accede a cada página (1 MB)
+    for (size_t i = 0; i < size; i++) { 
         if (data[i] == 0) { // Verifica si el valor inicial es cero
             data[i] = 'A' + (rand() % 26); // Escribe una letra aleatoria
         }
-        print_memory_usage(pid, i); // Mostrar estado de memoria después de cada acceso
+        
+        // print cuando (1 MB) 
+        if (i % (1024 * 1024) == 0) {
+            printf("Accediendo a la dirección %p\n", &data[i]);
+            print_memory_usage(pid, i);
+        }
     }
 
     // Liberar memoria
