@@ -25,7 +25,7 @@
 #include <linux/key.h>
 #include <linux/times.h>
 #include <linux/posix-timers.h>
-#include <linux/security.h>syscall(550, &stats);
+#include <linux/security.h>
 #include <linux/random.h>
 #include <linux/suspend.h>
 #include <linux/tty.h>
@@ -3078,4 +3078,110 @@ SYSCALL_DEFINE1(get_addr_tamalloc, size_t, size) {
         return addr;
 
     return addr; // Retorna la dirección virtual
+}
+
+struct process_mem_info {
+    unsigned long reserved_memory; // KB
+    unsigned long committed_memory; // KB
+    unsigned int committed_percent; // %
+    int oom_score; // OOM Score
+    char process_name[TASK_COMM_LEN]; // Nombre del proceso
+};
+
+
+struct system_mem_summary {
+    unsigned long total_reserved_memory; // MB
+    unsigned long total_committed_memory; // MB
+};
+
+SYSCALL_DEFINE1(get_all_mem_stats, struct system_mem_summary __user *, user_summary) {
+    struct task_struct *task;
+    struct system_mem_summary summary = {0};
+
+    rcu_read_lock();
+    for_each_process(task) {
+        struct mm_struct *mm = get_task_mm(task);
+        if (!mm)
+            continue;
+
+        summary.total_reserved_memory += mm->total_vm << (PAGE_SHIFT - 10); // Reservado en KB
+        summary.total_committed_memory += mm->hiwater_rss << (PAGE_SHIFT - 10); // Committed en KB
+        mmput(mm);
+    }
+    rcu_read_unlock();
+
+    // Convertir a MB
+    summary.total_reserved_memory >>= 10;
+    summary.total_committed_memory >>= 10;
+
+    if (copy_to_user(user_summary, &summary, sizeof(summary)))
+        return -EFAULT;
+
+    return 0;
+}
+
+SYSCALL_DEFINE1(get_all_pid_stats, struct process_mem_info __user *, user_info) {
+	struct task_struct *iter_task;
+    struct process_mem_info temp_info;
+    struct process_mem_info __user *user_ptr = user_info; // Puntero temporal para copiar al espacio de usuario
+
+    rcu_read_lock();
+    for_each_process(iter_task) {
+        struct mm_struct *mm = get_task_mm(iter_task);
+        if (!mm)
+            continue;
+
+        temp_info.reserved_memory = mm->total_vm << (PAGE_SHIFT - 10); // Reservado en KB
+        temp_info.committed_memory = mm->hiwater_rss << (PAGE_SHIFT - 10); // Committed en KB
+        temp_info.committed_percent = temp_info.reserved_memory ?
+            (temp_info.committed_memory * 100) / temp_info.reserved_memory : 0;
+        temp_info.oom_score = iter_task->signal->oom_score_adj;
+        strncpy(temp_info.process_name, iter_task->comm, TASK_COMM_LEN);
+
+        if (copy_to_user(user_ptr, &temp_info, sizeof(temp_info))) {
+            mmput(mm);
+            rcu_read_unlock();
+            return -EFAULT;
+        }
+
+        user_ptr++;
+        mmput(mm);
+    }
+    rcu_read_unlock();
+
+    return 0;
+}
+
+SYSCALL_DEFINE2(get_pid_stats, pid_t, pid, struct process_mem_info __user *, user_info) {
+    struct task_struct *task;
+    struct mm_struct *mm;
+    struct process_mem_info info;
+
+    rcu_read_lock();
+    task = pid_task(find_vpid(pid), PIDTYPE_PID);
+    if (!task) {
+        rcu_read_unlock();
+        return -ESRCH; // Proceso no encontrado
+    }
+
+    mm = get_task_mm(task);
+    if (!mm) {
+        rcu_read_unlock();
+        return -EINVAL; // Memoria no disponible para el proceso
+    }
+
+    info.reserved_memory = mm->total_vm << (PAGE_SHIFT - 10); // Reservado en KB
+    info.committed_memory = mm->hiwater_rss << (PAGE_SHIFT - 10); // Committed en KB
+    info.committed_percent = info.reserved_memory ?
+        (info.committed_memory * 100) / info.reserved_memory : 0;
+    info.oom_score = task->signal->oom_score_adj;
+    strncpy(info.process_name, task->comm, TASK_COMM_LEN);
+
+    mmput(mm);
+    rcu_read_unlock();
+
+    if (copy_to_user(user_info, &info, sizeof(info)))
+        return -EFAULT;
+
+    return 0;
 }

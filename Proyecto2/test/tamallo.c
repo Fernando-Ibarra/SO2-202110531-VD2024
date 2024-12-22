@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <errno.h>
+#include <sys/mman.h>
 #include <string.h>
 #include <time.h>
 
@@ -56,13 +57,23 @@ int main() {
 
     printf("Memoria asignada en: %p\n", addr);
 
+    printf("Presione enter: ");
+    scanf("%*c");
+
     // Acceder a la memoria y forzar page faults
     printf("\nAccediendo a la memoria asignada...\n");
     char *data = (char *)addr;
-    for (size_t i = 0; i < size; i += 1024 * 1024) { // Accede a cada página (4 KB)
-        data[i] = 'A' + rand() % 256; // Escribir para forzar asignación física
+    for (size_t i = 0; i < size; i++) { // Accede a cada página (1 MB)
+        if (data[i] == 0) { // Verifica si el valor inicial es cero
+            data[i] = 'A' + (rand() % 26); // Escribe una letra aleatoria
+        }
         print_memory_usage(pid, i); // Mostrar estado de memoria después de cada acceso
-        sleep(1); // Esperar 2 segundos
+    }
+
+    // Liberar memoria
+    if (munmap(addr, size) == -1) {
+        perror("Error al liberar memoria con munmap");
+        return EXIT_FAILURE;
     }
 
     // Mostrar uso de memoria después de acceder a toda la memoria

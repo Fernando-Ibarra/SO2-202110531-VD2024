@@ -433,5 +433,6 @@
 549 common get_snap_info_info sys_get_snap_info_info
 550 common get_io_process_stats sys_get_io_process_stats
 551 common get_addr_tamalloc sys_get_addr_tamalloc
-552 common get_pid_stats sys_get_pid_stats
+552 common get_all_pid_stats sys_get_all_pid_stats
 553 common get_all_mem_stats sys_get_all_mem_stats
+554 common get_pid_stats sys_get_pid_stats
