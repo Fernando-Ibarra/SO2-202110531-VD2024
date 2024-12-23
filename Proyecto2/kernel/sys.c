@@ -3065,19 +3065,16 @@ SYSCALL_DEFINE1(get_addr_tamalloc, size_t, size) {
     unsigned long addr;
     size_t aligned_size;
 
-    // Verificar que el tamaño solicitado es válido
     if (size == 0 || size > TASK_SIZE)
         return -EINVAL;
 
-    // Alinear el tamaño al tamaño de página
     aligned_size = PAGE_ALIGN(size);
 
-    // Reservar memoria virtual (sin asignar páginas físicas)
     addr = vm_mmap(NULL, 0, aligned_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0);
     if (IS_ERR_VALUE(addr))
         return addr;
 
-    return addr; // Retorna la dirección virtual
+    return addr;
 }
 
 struct process_mem_info {
@@ -3087,7 +3084,6 @@ struct process_mem_info {
     int oom_score; // OOM Score
     char process_name[TASK_COMM_LEN]; // Nombre del proceso
 };
-
 
 struct system_mem_summary {
     unsigned long total_reserved_memory; // MB
@@ -3123,7 +3119,7 @@ SYSCALL_DEFINE1(get_all_mem_stats, struct system_mem_summary __user *, user_summ
 SYSCALL_DEFINE1(get_all_pid_stats, struct process_mem_info __user *, user_info) {
 	struct task_struct *iter_task;
     struct process_mem_info temp_info;
-    struct process_mem_info __user *user_ptr = user_info; // Puntero temporal para copiar al espacio de usuario
+    struct process_mem_info __user *user_ptr = user_info;
 
     rcu_read_lock();
     for_each_process(iter_task) {
@@ -3131,8 +3127,8 @@ SYSCALL_DEFINE1(get_all_pid_stats, struct process_mem_info __user *, user_info) 
         if (!mm)
             continue;
 
-        temp_info.reserved_memory = mm->total_vm << (PAGE_SHIFT - 10); // Reservado en KB
-        temp_info.committed_memory = mm->hiwater_rss << (PAGE_SHIFT - 10); // Committed en KB
+        temp_info.reserved_memory = mm->total_vm << (PAGE_SHIFT - 10);
+        temp_info.committed_memory = mm->hiwater_rss << (PAGE_SHIFT - 10);
         temp_info.committed_percent = temp_info.reserved_memory ?
             (temp_info.committed_memory * 100) / temp_info.reserved_memory : 0;
         temp_info.oom_score = iter_task->signal->oom_score_adj;
@@ -3167,7 +3163,7 @@ SYSCALL_DEFINE2(get_pid_stats, pid_t, pid, struct process_mem_info __user *, use
     mm = get_task_mm(task);
     if (!mm) {
         rcu_read_unlock();
-        return -EINVAL; // Memoria no disponible para el proceso
+        return -EINVAL;
     }
 
     info.reserved_memory = mm->total_vm << (PAGE_SHIFT - 10); // Reservado en KB
