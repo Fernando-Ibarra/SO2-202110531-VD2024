@@ -379,3 +379,4 @@ SYSCALL_DEFINE1(so2_remove_fernando_memory_limit, pid_t, process_pid) {
 
 
 ## Comentario
+Este proyecto me enseñó a trabajar las syscalls con la estructura correcta o "oficial" del kernel de linux. Asi como tambien a limitar la memoria HEAP de un proceso y poder ver como al limitar el proceso este puede dejar de funcionar correctamente o no funcionar en absoluto.
