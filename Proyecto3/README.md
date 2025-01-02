@@ -1,163 +1,7 @@
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/syscalls.h>
-#include <linux/list.h>
-#include <linux/slab.h>
-#include <linux/mutex.h>
-#include <linux/resource.h>
-#include <linux/export.h>
-#include <linux/mm.h>
-#include <linux/mm_inline.h>
-#include <linux/utsname.h>
-#include <linux/mman.h>
-#include <linux/reboot.h>
-#include <linux/prctl.h>
-#include <linux/highuid.h>
-#include <linux/fs.h>
-#include <linux/kmod.h>
-#include <linux/ksm.h>
-#include <linux/perf_event.h>
-#include <linux/resource.h>
-#include <linux/kernel.h>
-#include <linux/workqueue.h>
-#include <linux/capability.h>
-#include <linux/device.h>
-#include <linux/key.h>
-#include <linux/times.h>
-#include <linux/posix-timers.h>
-#include <linux/security.h>
-#include <linux/random.h>
-#include <linux/suspend.h>
-#include <linux/tty.h>
-#include <linux/signal.h>
-#include <linux/cn_proc.h>
-#include <linux/getcpu.h>
-#include <linux/task_io_accounting_ops.h>
-#include <linux/seccomp.h>
-#include <linux/cpu.h>
-#include <linux/personality.h>
-#include <linux/ptrace.h>
-#include <linux/fs_struct.h>
-#include <linux/file.h>
-#include <linux/mount.h>
-#include <linux/gfp.h>
-#include <linux/syscore_ops.h>
-#include <linux/version.h>
-#include <linux/ctype.h>
-#include <linux/syscall_user_dispatch.h>
+# Proyecto 3
 
-#include <linux/compat.h>
-#include <linux/syscalls.h>
-#include <linux/kprobes.h>
-#include <linux/user_namespace.h>
-#include <linux/time_namespace.h>
-#include <linux/binfmts.h>
-
-#include <linux/sched.h>
-#include <linux/sched/autogroup.h>
-#include <linux/sched/loadavg.h>
-#include <linux/sched/stat.h>
-#include <linux/sched/mm.h>
-#include <linux/sched/coredump.h>
-#include <linux/sched/task.h>
-#include <linux/sched/cputime.h>
-#include <linux/rcupdate.h>
-#include <linux/uidgid.h>
-#include <linux/cred.h>
-
-#include <linux/nospec.h>
-
-// MY IMPORTS
-#include <linux/vmstat.h>
-#include <linux/mmzone.h>
-#include <linux/sysinfo.h>
-#include <linux/swap.h>
-#include <linux/slab.h>
-
-#include <linux/kmsg_dump.h>
-/* Move somewhere else to avoid recompiling? */
-#include <generated/utsrelease.h>
-
-#include <linux/uaccess.h>
-#include <asm/io.h>
-#include <asm/unistd.h>
-
-
-struct memory_limitation {
-    pid_t pid;
-    size_t memory_limit;
-};
-
-struct memory_list {
-    struct list_head list;
-    struct memory_limitation node;
-};
-
-static LIST_HEAD(memory_limitation_list);
-static DEFINE_MUTEX(memory_list_mutex);
-
-static int do_prlimit(struct task_struct *tsk, unsigned int resource, struct rlimit *new_rlim, struct rlimit *old_rlim) {
-	struct rlimit *rlim;
-	int retval = 0;
-
-	if (resource >= RLIM_NLIMITS)
-		return -EINVAL;
-	resource = array_index_nospec(resource, RLIM_NLIMITS);
-
-	if (new_rlim) {
-		if (new_rlim->rlim_cur > new_rlim->rlim_max)
-			return -EINVAL;
-		if (resource == RLIMIT_NOFILE &&
-				new_rlim->rlim_max > sysctl_nr_open)
-			return -EPERM;
-	}
-
-	/* Holding a refcount on tsk protects tsk->signal from disappearing. */
-	rlim = tsk->signal->rlim + resource;
-	task_lock(tsk->group_leader);
-	if (new_rlim) {
-		/*
-		 * Keep the capable check against init_user_ns until cgroups can
-		 * contain all limits.
-		 */
-		if (new_rlim->rlim_max > rlim->rlim_max &&
-				!capable(CAP_SYS_RESOURCE))
-			retval = -EPERM;
-		if (!retval)
-			retval = security_task_setrlimit(tsk, resource, new_rlim);
-	}
-	if (!retval) {
-		if (old_rlim)
-			*old_rlim = *rlim;
-		if (new_rlim)
-			*rlim = *new_rlim;
-	}
-	task_unlock(tsk->group_leader);
-
-	/*
-	 * RLIMIT_CPU handling. Arm the posix CPU timer if the limit is not
-	 * infinite. In case of RLIM_INFINITY the posix CPU timer code
-	 * ignores the rlimit.
-	 */
-	if (!retval && new_rlim && resource == RLIMIT_CPU &&
-	    new_rlim->rlim_cur != RLIM_INFINITY &&
-	    IS_ENABLED(CONFIG_POSIX_TIMERS)) {
-		/*
-		 * update_rlimit_cpu can fail if the task is exiting, but there
-		 * may be other tasks in the thread group that are not exiting,
-		 * and they need their cpu timers adjusted.
-		 *
-		 * The group_leader is the last task to be released, so if we
-		 * cannot update_rlimit_cpu on it, then the entire process is
-		 * exiting and we do not need to update at all.
-		 */
-		update_rlimit_cpu(tsk->group_leader, new_rlim->rlim_cur);
-	}
-
-	return retval;
-}
-
-
+### INSERT
+```c
 SYSCALL_DEFINE2(so2_add_fernando_memory_limit, pid_t, pid, size_t, memory_limit) {
     struct task_struct *task;
     struct memory_list *entry;
@@ -231,7 +75,39 @@ SYSCALL_DEFINE2(so2_add_fernando_memory_limit, pid_t, pid, size_t, memory_limit)
     pr_info("add_memory_limit: agregado PID=%d con memory_limit=%zu.\n", pid, memory_limit);
     return 0;
 }
+```
 
+#### Explicación del código
+**Validaciones iniciales**
+- PID negativo (-EINVAL): Se valida que pid sea mayor que 0.
+- Cantidad de memoria negativa (-EINVAL): Se valida que memory_limit sea mayor que 0.
+- Privilegios de superusuario (-EPERM): Se verifica que el usuario tenga permisos administrativos (CAP_SYS_ADMIN).
+
+**Verificación de existencia del proceso**
+- Se usa find_vpid y pid_task para verificar si el proceso con el PID especificado existe.
+- Si no existe, se retorna -ESRCH.
+
+**Configuración del nuevo límite de memoria**
+- Se crea una estructura rlimit con el límite actual y máximo igual a memory_limit.
+- Se utiliza do_prlimit para establecer el límite de memoria (RLIMIT_AS) del proceso.
+
+**Actualización o inserción en la lista global**
+- Se bloquea la lista global con mutex_lock para buscar si el proceso ya está en la lista memory_limitation_list.
+- Si ya está en la lista, se retorna -101.
+
+**Agregación de un nuevo nodo**
+- Si el proceso no está en la lista, se crea un nuevo nodo memory_list con kmalloc.
+- Se inicializa el nodo con el PID y el límite de memoria.
+
+**Inserción en la lista**
+- Se inicializa la lista del nodo con INIT_LIST_HEAD.
+- Se agrega el nodo a la lista global memory_limitation_list con list_add_tail.
+
+**Retorno de la syscall**
+- Devuelve 0 en caso de éxito.
+
+### GET
+```c
 SYSCALL_DEFINE3(so2_get_fernando_memory_limits, struct memory_limitation __user *, u_processes_buffer, size_t, max_entries, int __user *, processes_returned) {
     struct memory_list *entry;
     size_t count = 0;
@@ -280,7 +156,29 @@ SYSCALL_DEFINE3(so2_get_fernando_memory_limits, struct memory_limitation __user 
     pr_info("get_memory_limits: devueltos %zu procesos limitados.\n", count);
     return 0; // Éxito
 }
+```
 
+#### Explicación del código
+**Validaciones iniciales**
+- Punteros inválidos (-EINVAL)
+- Se verifica si los punteros u_processes_buffer y processes_returned son nulos.
+max_entries inválido (-EINVAL)
+- Si max_entries es menor o igual a 0, se devuelve un error.
+**Bloqueo de la lista global**
+- Se usa mutex_lock para proteger el acceso a la lista global memory_limitation_list.
+**Recorrido de la lista**
+- Se recorren los elementos de la lista usando list_for_each_entry.
+- Si el número de elementos copiados alcanza max_entries, se detiene el recorrido.
+**Copia de datos al espacio de usuario**
+- Para cada entrada, se copia la información al buffer proporcionado por el usuario mediante copy_to_user.
+- Si ocurre un error al copiar, se devuelve -EFAULT.
+**Escribir el número de procesos retornados**
+- Se usa put_user para escribir en el puntero processes_returned la cantidad de entradas realmente copiadas.
+**Retorno de la syscall**
+- Devuelve 0 en caso de éxito.
+
+### UPDATE
+```c
 SYSCALL_DEFINE2(so2_update_fernando_memory_limit, pid_t, process_pid, size_t, memory_limit) {
     struct task_struct *task;
     struct memory_list *entry;
@@ -355,7 +253,33 @@ SYSCALL_DEFINE2(so2_update_fernando_memory_limit, pid_t, process_pid, size_t, me
     pr_err("update_memory_limit: el proceso con PID=%d no está en la lista.\n", process_pid);
     return -102; // Error personalizado
 }
+```
 
+#### Explicación del código
+
+**Validaciones iniciales**
+- PID negativo (-EINVAL): Se valida que process_pid sea mayor que 0.
+- Cantidad de memoria negativa (-EINVAL): Se valida que memory_limit sea mayor que 0.
+- Privilegios de superusuario (-EPERM): Se verifica que el usuario tenga permisos administrativos (CAP_SYS_ADMIN).
+
+**Verificación de existencia del proceso**
+- Se usa find_vpid y pid_task para verificar si el proceso con el PID especificado existe.
+Si no existe, se retorna -ESRCH.
+
+**Acceso a la lista global**
+- Se bloquea la lista global con mutex_lock para buscar si el proceso está en la lista memory_limitation_list.
+- Si el proceso no está en la lista, se retorna -102.
+
+**Validación de límite excedido**
+- Se compara el uso actual de memoria del proceso (total_vm en páginas convertido a bytes) con el nuevo límite solicitado.
+Si ya excede el límite, se retorna -100.
+
+**Actualización del límite**
+- El límite en la lista se actualiza directamente.
+- También se actualiza el límite del proceso (RLIMIT_AS) utilizando do_prlimit.
+
+### DELETE
+```c
 SYSCALL_DEFINE1(so2_remove_fernando_memory_limit, pid_t, process_pid) {
     struct task_struct *task;
     struct memory_list *entry, *tmp;
@@ -416,3 +340,42 @@ SYSCALL_DEFINE1(so2_remove_fernando_memory_limit, pid_t, process_pid) {
     pr_err("remove_memory_limit: el proceso con PID=%d no está en la lista.\n", process_pid);
     return -102; // Error personalizado
 }
+```
+
+#### Explicación del código
+**Validaciones iniciales**
+- PID negativo (-EINVAL): Se valida que process_pid sea mayor que 0.
+- Privilegios de superusuario (-EPERM): Se verifica que el usuario tenga permisos administrativos (CAP_SYS_ADMIN).
+
+**Verificación de existencia del proceso**
+- Se usa find_vpid y pid_task para verificar si el proceso con el PID especificado existe.
+- Si no existe, se retorna -ESRCH.
+
+**Acceso a la lista global**
+- Se bloquea la lista global con mutex_lock para buscar si el proceso está en la lista memory_limitation_list.
+- Si no está, se retorna -102.
+
+**Eliminación del límite de memoria**
+- Se usa do_prlimit para restablecer el límite de memoria (RLIMIT_AS) del proceso a RLIM_INFINITY, lo que significa sin límites.
+
+**Eliminación de la entrada de la lista**
+- Si el proceso se encuentra en la lista, se elimina con list_del y se libera la memoria asociada con kfree.
+
+
+## Cronograma
+| Dia | Descripción | 
+| --- | --- |
+| 1 | Inicio del proyecto |
+| 2 | Syscall 1 |
+| 3 | Syscall 2, 3 y 4 |
+| 4 | Documentacion y test |
+
+
+## Errores
+| Error | Descripción | Solucion |
+| --- | --- | --- |
+| Compilacion | Durante la compilación se mostraba un warning acerca sobre que no se encontrab ala carpeta include en la carpeta del proyecto. | Se solucionó agregando la carpeta include en la carpeta del proyecto. |
+| do_prlimit | Al intentar compilar el código, se mostraba un error en la función do_prlimit. | Se solucionó agregando la librería <linux/prlimit.h> en el archivo fuente y la funcion |
+
+
+## Comentario
